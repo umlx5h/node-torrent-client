@@ -1,0 +1,4 @@
+*.torrent
+*.img
+*.sig
+node_modules/
