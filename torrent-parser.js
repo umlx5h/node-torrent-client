@@ -2,13 +2,16 @@
 
 const fs = require('fs');
 const bencode = require('bencode');
+const crypto = require('crypto');
 const bignum = require('bignum');
 
-module.exports.open = (filepath, isUTF8=false) => {
-  if(isUTF8) {
-    return bencode.decode(fs.readFileSync(filepath), 'utf8');
-  }
+module.exports.open = (filepath) => {
   return bencode.decode(fs.readFileSync(filepath));
+};
+
+module.exports.infoHash = torrent => {
+  const info = bencode.encode(torrent.info);
+  return crypto.createHash('sha1').update(info).digest();
 };
 
 module.exports.size = torrent => {
@@ -17,9 +20,4 @@ module.exports.size = torrent => {
     torrent.info.length;
 
   return bignum.toBuffer(size, {size: 8});
-};
-
-module.exports.infoHash = torrent => {
-  const info = bencode.encode(torrent.info);
-  return crypto.createHash('sha1').update(info).digest();
 };

@@ -9,6 +9,6 @@ module.exports.genId = () => {
     id = crypto.randomBytes(20);
     Buffer.from('-AT0001-').copy(id, 0);
   }
-  console.log(id);
   return id;
 };
+

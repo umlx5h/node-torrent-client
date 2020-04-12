@@ -9,18 +9,19 @@ const util = require('./util');
 
 module.exports.getPeers = (torrent, callback) => {
   const socket = dgram.createSocket('udp4');
-  // const url = torrent.announce.toString('utf8');
-  // const url = torrent['announce-list'].find(element => element[0].includes('udp://tracker.filetracker.pl'))[0].toString('utf8');
-  const trackerList = torrent['announce-list'].find(element => element[0].includes('udp://'));
-  console.log(trackerList[0].toString('utf8'));
-  const url = trackerList[0].toString('utf8');
-  console.log(url);
+  let url = torrent.announce.toString('utf8');
+  if ('announce-list' in torrent) {
+    const udpTrackerList = torrent['announce-list'].filter(el => el[0].includes('udp://')).map(el => el[0]);
+    if (udpTrackerList.length !== 0) {
+      url = udpTrackerList[0].toString('utf8');
+      console.log('tracker url:', url);
+    }
+  }
 
   // 1. send connect request
   udpSend(socket, buildConnReq(), url);
 
   socket.on('message', response => {
-    console.log(response);
     if (respType(response) === 'connect') {
       // 2. receive and parse connect response
       const connResp = parseConnResp(response);
@@ -36,12 +37,9 @@ module.exports.getPeers = (torrent, callback) => {
   });
 };
 
-function udpSend(socket, message, rawUrl, callback=(hoge)=>{
-  console.log(hoge)
-  console.log('hoge')
-}) {
+function udpSend(socket, message, rawUrl, callback=()=>{}) {
   const url = urlParse(rawUrl);
-  socket.send(message, 0, message.length, url.port, url.host, callback);
+  socket.send(message, 0, message.length, url.port, url.hostname, callback);
 }
 
 function respType(resp) {
@@ -51,28 +49,20 @@ function respType(resp) {
 }
 
 function buildConnReq() {
-  const buf = Buffer.alloc(16);
-
-  console.log(buf);
+  const buf = Buffer.allocUnsafe(16);
 
   // connection id
-  buf.writeUInt32BE(0x00000417, 0);
+  buf.writeUInt32BE(0x417, 0);
   buf.writeUInt32BE(0x27101980, 4);
-
-
   // action
-  buf.writeUInt32BE(0x00000000, 8)
-
+  buf.writeUInt32BE(0, 8);
   // transaction id
   crypto.randomBytes(4).copy(buf, 12);
-
-  console.log(buf);
 
   return buf;
 }
 
 function parseConnResp(resp) {
-  console.log(resp);
   return {
     action: resp.readUInt32BE(0),
     transactionId: resp.readUInt32BE(4),
@@ -102,7 +92,7 @@ function buildAnnounceReq(connId, torrent, port=6881) {
   // event
   buf.writeUInt32BE(0, 80);
   // ip address
-  buf.writeUInt32BE(0, 84);
+  buf.writeUInt32BE(0, 80);
   // key
   crypto.randomBytes(4).copy(buf, 88);
   // num want
